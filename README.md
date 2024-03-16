@@ -16,28 +16,29 @@ Changes in the Shortly fork made by @ttscoff ([Brett Terpstra](https://brettterp
 
 ## Installation
 
-1\. Download and extract the files to your web directory.
+1. Download and extract the files to your web directory.
+2. Use the included `database.sql` file to create a table to hold your URLs.
+3. Configure your webserver.
 
-2\. Use the included `database.sql` file to create a table to hold your URLs.
+    For **Apache**, edit your `.htaccess` file with the following (rename ht.access to .htaccess):
 
-3\. Configure your webserver.
-
-For **Apache**, edit your `.htaccess` file with the following (rename ht.access to .htaccess):
-
+    ```
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php?q=$1 [QSA,L]
+    ```
 
-For **Nginx**, add the following to your server declaration:
+    For **Nginx**, add the following to your server declaration:
 
+    ```
     server {
         location / {
             rewrite ^/(.*)$ /index.php?q=$1;
         }
     }
-
-4\. Copy `config.php.example` to `config.php` and edit.
+    ```
+4. Copy `config.php.example` to `config.php` and edit.
 
 ## Config options
 
@@ -84,7 +85,7 @@ Note that when you share a shortened URL to social media, the preview generators
 By default anyone is allowed to enter a new URL for shortening. To restrict the saving of URLs to 
 certain IP addresses, use the `allow` function:
 
-    $shorty->allow('192.168.0.10');
+    $shortly->allow('192.168.0.10');
 
 ## Requirements
 
