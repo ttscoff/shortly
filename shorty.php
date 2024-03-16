@@ -397,8 +397,8 @@ class Shorty {
 
 				// Display the shortened url
 				switch ($format) {
-				case 'text':
-					exit($url);
+				case 'html':
+					exit('<a href="' . $url . '">' . $url . '</a>');
 
 				case 'json':
 					header('Content-Type: application/json');
@@ -418,7 +418,7 @@ class Shorty {
 					exit('<img src="https://chart.googleapis.com/chart?chs=' . $size . 'x' . $size . '&cht=qr&chl=' . rawurlencode($url) . '&choe=UTF-8" title="Link to ' . $target . '" />');
 
 				default:
-					exit('<a href="' . $url . '">' . $url . '</a>');
+					exit($url);
 				}
 			} else {
 				$this->error('Bad input.');

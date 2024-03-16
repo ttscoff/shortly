@@ -29,7 +29,7 @@ $shorty->set_target($target);
 /**
  * Ensure $long_redirect has protocol and trailing slash
  */
-if (!preg_match('/^https?\/\//', $long_redirect)) {
+if (!preg_match('/^https?:\/\//', $long_redirect)) {
 	$long_redirect = 'https://' . $long_redirect;
 }
 if (!preg_match('/\/$/', $long_redirect)) {
