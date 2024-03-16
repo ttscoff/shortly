@@ -1,11 +1,13 @@
 <?php
 /**
- * Shorty: A simple URL shortener.
+ * Shortly: A simple URL shortener.
  *
- * @copyright Copyright (c) 2011, Mike Cao <mike@mikecao.com>
+ * @copyright Original Copyright (c) 2011, (Shorty by) Mike Cao <mike@mikecao.com>
  * @license   MIT, http://www.opensource.org/licenses/mit-license.php
+ *
+ * Updated 2024 by Brett Terpstra <me@brettterpstra.com>, name changed to Shortly
  */
-class Shorty {
+class Shortly {
 /**
  * Default characters to use for shortening.
  *
