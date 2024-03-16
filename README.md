@@ -1,6 +1,18 @@
 # Shorty
 
-Shorty is a simple URL shortener for PHP.
+This is a fork of Shorty, a simple URL shortener for PHP.
+
+Shortened URLs are 301 redirects which will still display open graph previews when shared on social media.
+
+## Changes
+
+Changes in this fork made by @ttscoff ([Brett Terpstra](https://brettterpstra.com)):
+
+- Allow limiting shortening to one domain
+- Allow forwarding of paths containing hyphens or which are not found in the database to be forwarded to a root url
+- Allow appending query strings to urls before shortening or forwarding
+- Accept `format=qr` and `size=XXX` to create QR codes for shortened urls
+- Add longURL keys to JSON and XML output
 
 ## Installation
 
@@ -10,7 +22,7 @@ Shorty is a simple URL shortener for PHP.
 
 3\. Configure your webserver.
 
-For **Apache**, edit your `.htaccess` file with the following:
+For **Apache**, edit your `.htaccess` file with the following (rename ht.access to .htaccess):
 
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} !-f
@@ -27,6 +39,20 @@ For **Nginx**, add the following to your server declaration:
 
 4\. Edit the `config.php` file.
 
+## Config options
+
+Set `$hostname` to the base url of your shortener.
+
+By default urls from any domain can be shortened. To limit shortening to a specific domain, set `$site_specific = true` in `config.php` and add a domain for `$target`.
+
+If a path is passed that contains hyphens or is otherwise not found, Shorty will forward to the url specified in `$long_redirect`, with the path appended to the base url. For example, if `$long_redirect` is `https://blog.example.com/` and somebody tries to access `example.com/test-post`, the request will be forwarded to `https://blog.example.com/test-post`.
+
+If you would like a query string (such as Google UTM parameters) appended to urls before shortening, set `$query_string`. If you're using this as a general shortener and expect to pass it urls that already contain query strings, leave this empty ('') to avoid double query strings.
+
+Set mySQL database name, host, user, and password in the `$connection` setting.
+
+See the comments in `config.php` for more options on character sets and randomizing short urls to make them less guessable.
+
 ## Generating short URLs
 
 To generate a short URL, simply pass in a `url` query parameter to your Shorty installation:
@@ -39,12 +65,19 @@ This will return a shortened URL such as:
 
 When a user opens the short URL they will be redirected to the long URL location.
 
-By default, Shorty will generate an HTML response for all saved URLs.
-You can alter the response format by passing in a `format` query parameter.
+By default, Shorty will output a plain text version of the shortened URL. This is ideal for calling from scripts and command line applications. If you'd like to have a full HTML link tag output, add `&format=html` to your call.
 
-    http://example.com/?url=http://www.google.com&format=text
+    http://example.com/?url=http://www.google.com&format=html
 
-The possible formats are `html`, `xml`, `text`, and `json`.
+To generate a QR code for a shortened URL, use `format=qr`. By default this will generate a 200x200px PNG file. You can use `size=XXX` to set a size between 100 and 500 pixels if desired.
+
+The possible formats are `html`, `xml`, `text`, `json`, and `qr`. XML and JSON responses will contain keys for `url` and `longURL`.
+
+## Analytics
+
+The mySQL database of shortened urls will contain basic analytics such as hit counts and access dates. There is currently no interface for displaying this information.
+
+Note that when you share a shortened URL to social media, the preview generators for those sites will repeatedly make hits on the URL. Shorty makes no distinction between those and actual visits, so these numbers can't be used for sales analytics or anything like that, other than to see how widely your shortened url may have spread.
 
 ## Whitelist
 

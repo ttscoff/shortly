@@ -6,390 +6,447 @@
  * @license   MIT, http://www.opensource.org/licenses/mit-license.php
  */
 class Shorty {
-    /**
-     * Default characters to use for shortening.
-     *
-     * @var string
-     */
-    private $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+/**
+ * Default characters to use for shortening.
+ *
+ * @var string
+ */
+	private $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
-    /**
-     * Salt for id encoding.
-     *
-     * @var string
-     */
-    private $salt = '';
+	/**
+	 * Salt for id encoding.
+	 *
+	 * @var string
+	 */
+	private $salt = '';
 
-    /**
-     * Length of number padding.
-     */
-    private $padding = 1;
+	/**
+	 * Length of number padding.
+	 */
+	private $padding = 1;
 
-    /**
-     * Hostname
-     */
-    private $hostname = '';
+	/**
+	 * Hostname
+	 */
+	private $hostname = '';
 
-    /**
-     * PDO database connection.
-     *
-     * @var object
-     */
-    private $connection = null;
+	/**
+	 * Target site (for site-specific shorteners)
+	 */
+	private $site_specific = false;
+	private $target = '';
+	private $long_redirect = '';
 
-    /**
-     * Whitelist of IPs allowed to save URLs.
-     * If the list is empty, then any IP is allowed.
-     *
-     * @var array
-     */
-    private $whitelist = array();
+	/**
+	 * Query string to add
+	 */
+	private $query_string = '';
 
-    /**
-     * Constructor
-     *
-     * @param string $hostname Hostname
-     * @param object $connection Database connection
-     */
-    public function __construct($hostname, $connection) {
-        $this->hostname = $hostname;
-        $this->connection = $connection;
-    }
+	/**
+	 * PDO database connection.
+	 *
+	 * @var object
+	 */
+	private $connection = null;
 
-    /**
-     * Gets the character set for encoding.
-     *
-     * @return string Set of characters
-     */
-    public function get_chars() {
-        return $this->chars;
-    }
+	/**
+	 * Whitelist of IPs allowed to save URLs.
+	 * If the list is empty, then any IP is allowed.
+	 *
+	 * @var array
+	 */
+	private $whitelist = array();
 
-    /**
-     * Sets the character set for encoding.
-     *
-     * @param string $chars Set of characters
-     */
-    public function set_chars($chars) {
-        if (!is_string($chars) || empty($chars)) {
-            throw new Exception('Invalid input.');
-        }
-        $this->chars = $chars;
-    }
+	/**
+	 * Constructor
+	 *
+	 * @param string $hostname Hostname
+	 * @param object $connection Database connection
+	 */
+	public function __construct($hostname, $connection) {
+		$this->hostname = $hostname;
+		$this->connection = $connection;
+	}
 
-    /**
-     * Gets the salt string for encoding.
-     *
-     * @return string Salt
-     */
-    public function get_salt() {
-        return $this->salt;
-    }
+	/**
+	 * Gets the character set for encoding.
+	 *
+	 * @return string Set of characters
+	 */
+	public function get_chars() {
+		return $this->chars;
+	}
 
-    /**
-     * Sets the salt string for encoding.
-     *
-     * @param string $salt Salt string
-     */
-    public function set_salt($salt) {
-        $this->salt = $salt;
-    }
+	/**
+	 * Sets the character set for encoding.
+	 *
+	 * @param string $chars Set of characters
+	 */
+	public function set_chars($chars) {
+		if (!is_string($chars) || empty($chars)) {
+			throw new Exception('Invalid input.');
+		}
+		$this->chars = $chars;
+	}
 
-    /**
-     * Gets the padding length.
-     *
-     * @return int Padding length
-     */
-    public function get_padding() {
-        return $this->padding;
-    }
+	/**
+	 * Gets the salt string for encoding.
+	 *
+	 * @return string Salt
+	 */
+	public function get_salt() {
+		return $this->salt;
+	}
 
-    /**
-     * Sets the padding length.
-     *
-     * @param int $padding Padding length
-     */
-    public function set_padding($padding) {
-        $this->padding = $padding;
-    }
+	/**
+	 * Sets the salt string for encoding.
+	 *
+	 * @param string $salt Salt string
+	 */
+	public function set_salt($salt) {
+		$this->salt = $salt;
+	}
 
-    /**
-     * Converts an id to an encoded string.
-     *
-     * @param int $n Number to encode
-     * @return string Encoded string
-     */
-    public function encode($n) {
-        $k = 0;
+	public function set_site_specific($site_specific) {
+		$this->site_specific = $site_specific;
+	}
 
-        if ($this->padding > 0 && !empty($this->salt)) {
-            $k = self::get_seed($n, $this->salt, $this->padding);
-            $n = (int)($k.$n);
-        }
+	public function set_target($target) {
+		$this->target = $target;
+	}
 
-        return self::num_to_alpha($n, $this->chars);
-    }
+	public function set_long_redirect($long_redirect) {
+		$this->long_redirect = $long_redirect;
+	}
 
-    /**
-     * Converts an encoded string into a number.
-     *
-     * @param string $s String to decode
-     * @return int Decoded number
-     */
-    public function decode($s) {
-        $n = self::alpha_to_num($s, $this->chars);
+	public function set_query_string($query_string) {
+		$this->query_string = $query_string;
+	}
 
-        return (!empty($this->salt)) ? substr($n, $this->padding) : $n;
-    }
+	/**
+	 * Gets the padding length.
+	 *
+	 * @return int Padding length
+	 */
+	public function get_padding() {
+		return $this->padding;
+	}
 
-    /**
-     * Gets a number for padding based on a salt.
-     *
-     * @param int $n Number to pad
-     * @param string $salt Salt string
-     * @param int $padding Padding length
-     * @return int Number for padding
-     */
-    public static function get_seed($n, $salt, $padding) {
-        $hash = md5($n.$salt);
-        $dec = hexdec(substr($hash, 0, $padding));
-        $num = $dec % pow(10, $padding);
-        if ($num == 0) $num = 1;
-        $num = str_pad($num, $padding, '0');
+	/**
+	 * Sets the padding length.
+	 *
+	 * @param int $padding Padding length
+	 */
+	public function set_padding($padding) {
+		$this->padding = $padding;
+	}
 
-        return $num;
-    }
+	/**
+	 * Converts an id to an encoded string.
+	 *
+	 * @param int $n Number to encode
+	 * @return string Encoded string
+	 */
+	public function encode($n) {
+		$k = 0;
 
-    /**
-     * Converts a number to an alpha-numeric string.
-     *
-     * @param int $num Number to convert
-     * @param string $s String of characters for conversion
-     * @return string Alpha-numeric string
-     */
-    public static function num_to_alpha($n, $s) {
-        $b = strlen($s);
-        $m = $n % $b;
+		if ($this->padding > 0 && !empty($this->salt)) {
+			$k = self::get_seed($n, $this->salt, $this->padding);
+			$n = (int) ($k . $n);
+		}
 
-        if ($n - $m == 0) return substr($s, $n, 1);
+		return self::num_to_alpha($n, $this->chars);
+	}
 
-        $a = '';
+	/**
+	 * Converts an encoded string into a number.
+	 *
+	 * @param string $s String to decode
+	 * @return int Decoded number
+	 */
+	public function decode($s) {
+		$n = self::alpha_to_num($s, $this->chars);
 
-        while ($m > 0 || $n > 0) {
-            $a = substr($s, $m, 1).$a;
-            $n = ($n - $m) / $b;
-            $m = $n % $b;
-        }
+		return (!empty($this->salt)) ? substr($n, $this->padding) : $n;
+	}
 
-        return $a;
-    }
+	/**
+	 * Gets a number for padding based on a salt.
+	 *
+	 * @param int $n Number to pad
+	 * @param string $salt Salt string
+	 * @param int $padding Padding length
+	 * @return int Number for padding
+	 */
+	public static function get_seed($n, $salt, $padding) {
+		$hash = md5($n . $salt);
+		$dec = hexdec(substr($hash, 0, $padding));
+		$num = $dec % pow(10, $padding);
+		if ($num == 0) {
+			$num = 1;
+		}
 
-    /**
-     * Converts an alpha numeric string to a number.
-     *
-     * @param string $a Alpha-numeric string to convert
-     * @param string $s String of characters for conversion
-     * @return int Converted number
-     */
-    public static function alpha_to_num($a, $s) {
-        $b = strlen($s);
-        $l = strlen($a);
+		$num = str_pad($num, $padding, '0');
 
-        for ($n = 0, $i = 0; $i < $l; $i++) {
-            $n += strpos($s, substr($a, $i, 1)) * pow($b, $l - $i - 1);
-        }
+		return $num;
+	}
 
-        return $n;
-    }
+	/**
+	 * Converts a number to an alpha-numeric string.
+	 *
+	 * @param int $num Number to convert
+	 * @param string $s String of characters for conversion
+	 * @return string Alpha-numeric string
+	 */
+	public static function num_to_alpha($n, $s) {
+		$b = strlen($s);
+		$m = $n % $b;
 
-    /**
-     * Looks up a URL in the database by id.
-     *
-     * @param string $id URL id
-     * @return array URL record
-     */
-    public function fetch($id) {
-        $statement = $this->connection->prepare(
-            'SELECT * FROM urls WHERE id = ?'
-        );
-        $statement->execute(array($id));
+		if ($n - $m == 0) {
+			return substr($s, $n, 1);
+		}
 
-        return $statement->fetch(PDO::FETCH_ASSOC);
-    }
+		$a = '';
 
-    /**
-     * Attempts to locate a URL in the database.
-     *
-     * @param string $url URL
-     * @return array URL record
-     */
-    public function find($url) {
-        $statement = $this->connection->prepare(
-            'SELECT * FROM urls WHERE url = ?'
-        );
-        $statement->execute(array($url));
+		while ($m > 0 || $n > 0) {
+			$a = substr($s, $m, 1) . $a;
+			$n = ($n - $m) / $b;
+			$m = $n % $b;
+		}
 
-        return $statement->fetch(PDO::FETCH_ASSOC);
-    }
+		return $a;
+	}
 
-    /**
-     * Stores a URL in the database.
-     *
-     * @param string $url URL to store
-     * @return int Insert id
-     */
-    public function store($url) {
-        $datetime = date('Y-m-d H:i:s');
+	/**
+	 * Converts an alpha numeric string to a number.
+	 *
+	 * @param string $a Alpha-numeric string to convert
+	 * @param string $s String of characters for conversion
+	 * @return int Converted number
+	 */
+	public static function alpha_to_num($a, $s) {
+		$b = strlen($s);
+		$l = strlen($a);
 
-        $statement = $this->connection->prepare(
-            'INSERT INTO urls (url, created) VALUES (?,?)'
-        );
-        $statement->execute(array($url, $datetime));
+		for ($n = 0, $i = 0; $i < $l; $i++) {
+			$n += strpos($s, substr($a, $i, 1)) * pow($b, $l - $i - 1);
+		}
 
-        return $this->connection->lastInsertId();
-    }
+		return $n;
+	}
 
-    /**
-     * Updates statistics for a URL.
-     *
-     * @param int $id URL id
-     */
-    public function update($id) {
-        $datetime = date('Y-m-d H:i:s');
+	/**
+	 * Looks up a URL in the database by id.
+	 *
+	 * @param string $id URL id
+	 * @return array URL record
+	 */
+	public function fetch($id) {
+		$statement = $this->connection->prepare(
+			'SELECT * FROM urls WHERE id = ?'
+		);
+		$statement->execute(array($id));
 
-        $statement = $this->connection->prepare(
-            'UPDATE urls SET hits = hits + 1, accessed = ? WHERE id = ?'
-        );
-        $statement->execute(array($datetime, $id));
-    }
+		return $statement->fetch(PDO::FETCH_ASSOC);
+	}
 
-    /**
-     * Sends a redirect to a URL.
-     *
-     * @param string $url URL
-     */
-    public function redirect($url) {
-        header("Location: $url", true, 301);
-        exit();
-    }
+	/**
+	 * Attempts to locate a URL in the database.
+	 *
+	 * @param string $url URL
+	 * @return array URL record
+	 */
+	public function find($url) {
+		$statement = $this->connection->prepare(
+			'SELECT * FROM urls WHERE url = ?'
+		);
+		$statement->execute(array($url));
 
-    /**
-     * Sends a 404 response.
-     */
-    public function not_found() {
-        header('Status: 404 Not Found');
-        exit(
-            '<h1>404 Not Found</h1>'.
-            str_repeat(' ', 512)
-        );
-    }
+		return $statement->fetch(PDO::FETCH_ASSOC);
+	}
 
-    /**
-     * Sends an error message.
-     *
-     * @param string $message Error message
-     */
-    public function error($message) {
-        exit("<h1>$message</h1>");
-    }
+	/**
+	 * Stores a URL in the database.
+	 *
+	 * @param string $url URL to store
+	 * @return int Insert id
+	 */
+	public function store($url) {
+		$datetime = date('Y-m-d H:i:s');
 
-    /**
-     * Adds an IP to allow saving URLs.
-     *
-     * @param string|array $ip IP address or array of IP addresses
-     */
-    public function allow($ip) {
-        if (is_array($ip)) {
-            $this->whitelist = array_merge($this->whitelist, $ip);
-        }
-        else {
-            array_push($this->whitelist, $ip);
-        }
-    }
+		$statement = $this->connection->prepare(
+			'INSERT INTO urls (url, created) VALUES (?,?)'
+		);
+		$statement->execute(array($url, $datetime));
 
-    /**
-     * Starts the program.
-     */
-    public function run() {
-        $q = str_replace('/', '', $_GET['q']);
+		return $this->connection->lastInsertId();
+	}
 
-        $url = '';
-        if (isset($_GET['url'])) {
-          $url = urldecode($_GET['url']);
-        }
+	/**
+	 * Updates statistics for a URL.
+	 *
+	 * @param int $id URL id
+	 */
+	public function update($id) {
+		$datetime = date('Y-m-d H:i:s');
 
-        $format = '';
-        if (isset($_GET['format'])) {
-          $format = strtolower($_GET['format']);
-        }
+		$statement = $this->connection->prepare(
+			'UPDATE urls SET hits = hits + 1, accessed = ? WHERE id = ?'
+		);
+		$statement->execute(array($datetime, $id));
+	}
 
-        // If adding a new URL
-        if (!empty($url)) {
-            if (!empty($this->whitelist) && !in_array($_SERVER['REMOTE_ADDR'], $this->whitelist)) {
-                $this->error('Not allowed.');
-            }
+	/**
+	 * Sends a redirect to a URL.
+	 *
+	 * @param string $url URL
+	 */
+	public function redirect($url) {
+		header("Location: $url", true, 301);
+		exit();
+	}
 
-            if (preg_match('/^http[s]?\:\/\/[\w]+/', $url)) {
-                $result = $this->find($url);
+	/**
+	 * Sends a 404 response.
+	 */
+	public function not_found() {
+		header('Status: 404 Not Found');
+		exit(
+			'<h1>404 Not Found</h1>' .
+			str_repeat(' ', 512)
+		);
+	}
 
-                // Not found, so save it
-                if (empty($result)) {
+	/**
+	 * Sends an error message.
+	 *
+	 * @param string $message Error message
+	 */
+	public function error($message) {
+		exit("<h1>$message</h1>");
+	}
 
-                    $id = $this->store($url);
+	/**
+	 * Adds an IP to allow saving URLs.
+	 *
+	 * @param string|array $ip IP address or array of IP addresses
+	 */
+	public function allow($ip) {
+		if (is_array($ip)) {
+			$this->whitelist = array_merge($this->whitelist, $ip);
+		} else {
+			array_push($this->whitelist, $ip);
+		}
+	}
 
-                    $url = $this->hostname.'/'.$this->encode($id);
-                }
-                else {
-                    $url = $this->hostname.'/'.$this->encode($result['id']);
-                }
+	/**
+	 * Starts the program.
+	 */
+	public function run() {
 
-                // Display the shortened url
-                switch ($format) {
-                    case 'text':
-                        exit($url);
+		$q = '';
 
-                    case 'json':
-                        header('Content-Type: application/json');
-                        exit(json_encode(array('url' => $url)));
+		if (isset($_GET['q'])) {
+			$q = str_replace('/', '', $_GET['q']);
+		}
 
-                    case 'xml':
-                        header('Content-Type: application/xml');
-                        exit(implode("\n", array(
-                            '<?xml version="1.0"?'.'>',
-                            '<response>',
-                            '  <url>'.htmlentities($url).'</url>',
-                            '</response>'
-                        )));
+		$url = '';
+		if (isset($_GET['url'])) {
+			$url = urldecode($_GET['url']);
+		}
 
-                    default:
-                        exit('<a href="'.$url.'">'.$url.'</a>');
-                }
-            }
-            else {
-                $this->error('Bad input.');
-            }
-        }
-        // Lookup by id
-        else {
-            if (empty($q)) {
-              $this->not_found();
-              return;
-            }
+		$format = '';
+		if (isset($_GET['format'])) {
+			$format = strtolower($_GET['format']);
+		}
 
-            if (preg_match('/^([a-zA-Z0-9]+)$/', $q, $matches)) {
-                $id = self::decode($matches[1]);
+		$size = 200;
+		if (isset($_GET['size'])) {
+			$size = intval($_GET['size']);
+			if ($size > 500) {
+				$size = 500;
+			} elseif ($size < 100) {
+				$size = 100;
+			}
+		}
 
-                $result = $this->fetch($id);
+		// If adding a new URL
+		if (!empty($url)) {
+			if (!empty($this->whitelist) && !in_array($_SERVER['REMOTE_ADDR'], $this->whitelist)) {
+				$this->error('Not allowed.');
+			}
 
-                if (!empty($result)) {
-                    $this->update($id);
+			if ($this->site_specific && !preg_match('/^https?:\/\/' . $this->target . '/', $url)) {
+				$this->error('URL must be from ' . $this->target);
+			}
 
-                    $this->redirect($result['url']);
-                }
-                else {
-                    $this->not_found();
-                }
-            }
-        }
-    }
+			if (preg_match('/^http[s]?\:\/\/[\w]+/', $url)) {
+				$longURL = $url;
+				$result = $this->find($url);
+				$target = $this->target;
+
+				// Not found, so save it
+				if (empty($result)) {
+
+					$id = $this->store($url);
+
+					$url = $this->hostname . '/' . $this->encode($id);
+				} else {
+					$url = $this->hostname . '/' . $this->encode($result['id']);
+				}
+
+				// Display the shortened url
+				switch ($format) {
+				case 'text':
+					exit($url);
+
+				case 'json':
+					header('Content-Type: application/json');
+					exit(json_encode(array('url' => $url, 'longURL' => $longURL)));
+
+				case 'xml':
+					header('Content-Type: application/xml');
+					exit(implode("\n", array(
+						'<?xml version="1.0"?' . '>',
+						'<response>',
+						'  <url>' . htmlentities($url) . '</url>',
+						'  <longURL>' . htmlentities($longURL) . '</longURL>',
+						'</response>',
+					)));
+
+				case 'qr':
+					exit('<img src="https://chart.googleapis.com/chart?chs=' . $size . 'x' . $size . '&cht=qr&chl=' . rawurlencode($url) . '&choe=UTF-8" title="Link to ' . $target . '" />');
+
+				default:
+					exit('<a href="' . $url . '">' . $url . '</a>');
+				}
+			} else {
+				$this->error('Bad input.');
+			}
+		}
+		// Lookup by id
+		else {
+			if (empty($q)) {
+				$this->redirect('https://' . $this->target);
+			}
+
+			if (preg_match('/\w-\w/', $q)) {
+				$this->redirect($this->long_redirect . $q . $this->query_string);
+			}
+
+			if (preg_match('/^([a-zA-Z0-9]+)$/', $q, $matches)) {
+				$id = self::decode($matches[1]);
+
+				$result = $this->fetch($id);
+
+				if (!empty($result)) {
+					$this->update($id);
+
+					$this->redirect($result['url']);
+				} else {
+					$this->redirect('https://' . $this->target . '/' . $q . $this->query_string);
+				}
+			}
+		}
+	}
 }

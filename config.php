@@ -1,6 +1,15 @@
 <?php
 // Hostname for your URL shortener
-$hostname = 'http://example.com';
+$hostname = 'https://example.com';
+
+// If you only want to allow urls from a specific domain to be shortened
+$site_specific = false;
+// The hostname to limit to (no protocol or trailing slash)
+$target = 'example.com';
+// If the short url contains dashes or isn't found, append it to this url
+$long_redirect = 'https://example.com/blog/';
+// query string to add to long url before shortening or forwarding
+$query_string = '?utm_source=blog&utm_medium=web&utm_campaign=share_button';
 
 // PDO connection to the database
 $connection = new PDO('mysql:dbname=shorty;host=localhost', 'user', 'password');
